@@ -969,6 +969,12 @@ require('lazy').setup({
   require 'kickstart.plugins.surround',
   require 'kickstart.plugins.autopairs',
   require 'kickstart.plugins.avante',
+  require 'kickstart.plugins.lean',
+  require 'kickstart.plugins.vimtex',
+  require 'kickstart.plugins.neominimap',
+  require 'kickstart.plugins.codecompanion',
+  require 'kickstart.plugins.typr',
+  -- require 'kickstart.plugins.precognition',
   -- require 'kickstart.plugins.harpoon',
   -- require 'kickstart.plugins.leap',
   --
@@ -976,6 +982,7 @@ require('lazy').setup({
   --    This is the easiest way to modularize your config.
   vim.api.nvim_set_keymap('n', 'd`', 'd$', { noremap = false, silent = true }),
   vim.api.nvim_set_keymap('n', '<leader>nd', ':Noice dismiss<CR>', { noremap = true, silent = true }),
+
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
   --    For additional information, see `:help lazy.nvim-lazy.nvim-structuring-your-plugins`
   -- { import = 'custom.plugins' },
@@ -1000,6 +1007,31 @@ require('lazy').setup({
     },
   },
 })
+-- Your new CodeCompanion mappings:
+vim.keymap.set('n', '<leader>aa', function()
+  -- Try to find a window with "CodeCompanion" in the buffer name
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    local name = vim.api.nvim_buf_get_name(buf)
+    if name:match 'CodeCompanion' then
+      vim.api.nvim_win_close(win, true)
+      return
+    end
+  end
 
+  -- If not open, run the command to open it
+  vim.cmd 'CodeCompanionChat'
+end, { desc = 'Toggle CodeCompanionChat' })
+-- vim.api.nvim_set_keymap('n', '<leader>aa', ':CodeCompanionChat<CR>', { noremap = true, silent = false })
+
+vim.keymap.set('n', '<leader>gc', function()
+  local file = vim.fn.expand '%:p'
+  local cmd = string.format('git add "%s" && git commit -m "Update %s"', file, vim.fn.expand '%:t')
+  vim.fn.system(cmd)
+  print('[Committed] ' .. vim.fn.expand '%:t')
+end, { desc = 'Git commit current file' })
+vim.keymap.set('n', ',ll', '<Plug>(vimtex-compile)', { silent = true })
+vim.api.nvim_set_keymap('v', '<leader>aa', ":'<,'>CodeCompanion Chat Explain this<CR>", { noremap = true, silent = true })
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+vim.opt.fillchars:append { vert = ' ' }

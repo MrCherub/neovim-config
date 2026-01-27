@@ -1,4 +1,3 @@
-
 -- Bubbles config for lualine
 -- Author: lokesh-krishna
 -- MIT license, see LICENSE for more details.
@@ -11,14 +10,14 @@ local colors = {
   white  = '#c6c6c6',
   red    = '#ff5189',
   violet = '#d183e8',
-  grey   = '#303030',
+  grey   = '#2E3440',
 }
 
 local bubbles_theme = {
   normal = {
     a = { fg = colors.black, bg = colors.grey },
     b = { fg = colors.white, bg = colors.grey },
-    c = { fg = colors.white },
+    c = { fg = colors.white, bg = colors.grey },
   },
   insert = { a = { fg = colors.black, bg = colors.violet } },
   visual = { a = { fg = colors.black, bg = colors.cyan } },
@@ -47,7 +46,22 @@ return {
         sections = {
           lualine_a = { { 'mode', separator = { left = '' }, right_padding = 2 } },
           lualine_b = { 'branch', 'diff', 'diagnostics' },
-          lualine_c = { 'buffers' },
+          lualine_c = {
+            {
+              'buffers',
+              show_filename_only = true, -- Show only file names
+              mode = 2, -- Show buffer name + number
+              symbols = {
+                modified = '[+]', -- Indicator for modified buffers
+                alternate_file = '', -- Disable alternate file prefix
+                directory = '', -- Icon for directories
+              },
+              buffers_color = {
+                active = { fg = colors.violet, bg = colors.grey, gui = 'bold' }, -- Added bg for active buffer
+                inactive = { fg = colors.white, bg = colors.grey }, -- Added bg for inactive buffers
+              },
+            },
+          },
           lualine_x = { 'encoding', 'fileformat', 'filetype' },
           lualine_y = { 'progress' },
           lualine_z = { { 'location', separator = { right = '' }, left_padding = 2 } },

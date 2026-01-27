@@ -14,6 +14,8 @@ return {
           typescript = { 'eslint' }, -- Linter for TypeScript
           python = { 'flake8' }, -- Linter for Python (you can use any linter of your choice)
           java = { 'checkstyle' },
+          cpp = { 'cpplint' },
+          cmake = { 'cmakelang' },
         },
       }
 
