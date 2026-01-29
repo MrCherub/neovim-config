@@ -1030,7 +1030,15 @@ vim.keymap.set('n', '<leader>gc', function()
   vim.fn.system(cmd)
   print('[Committed] ' .. vim.fn.expand '%:t')
 end, { desc = 'Git commit current file' })
+vim.keymap.set('n', '<leader>lc', function()
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(w)):match 'Vimtex' then
+      vim.api.nvim_win_close(w, true)
+    end
+  end
+end, { silent = true, desc = 'Close VimTeX popup' })
 vim.keymap.set('n', ',ll', '<Plug>(vimtex-compile)', { silent = true })
+vim.keymap.set('n', ',lc', ':cclose<CR>', { silent = true, desc = 'Close LaTeX compiler window' })
 vim.api.nvim_set_keymap('v', '<leader>aa', ":'<,'>CodeCompanion Chat Explain this<CR>", { noremap = true, silent = true })
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
