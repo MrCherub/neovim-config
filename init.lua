@@ -782,7 +782,34 @@ require('lazy').setup({
       local cmp = require 'cmp'
       local luasnip = require 'luasnip'
       luasnip.config.setup {}
+      -- === ADD YOUR ZETTEL SNIPPETS HERE ===
+      local timestamp = function()
+        return os.date '%Y%m%d%H%M'
+      end
 
+      luasnip.add_snippets('tex', {
+        luasnip.snippet('qbox', {
+          luasnip.text_node { '\\begin{question}{' },
+          luasnip.function_node(timestamp, {}),
+          luasnip.text_node { '}', '\t' },
+          luasnip.insert_node(1, 'Type your question here...'),
+          luasnip.text_node { '', '\\end{question}' },
+        }),
+        -- You can add more snippets for claim, pitfall, known, etc. here
+      })
+      -- ====================================
+
+      --     cmp.setup {
+      --       snippet = {
+      --         expand = function(args)
+      --           luasnip.lsp_expand(args.body)
+      --         end,
+      --       },
+      --       completion = { completeopt = 'menu,menuone,noinsert' },
+      --       -- your existing cmp settings continue here...
+      --     }
+      --   end
+      -- }
       cmp.setup {
         snippet = {
           expand = function(args)
