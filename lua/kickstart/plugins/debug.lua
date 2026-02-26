@@ -11,28 +11,14 @@ return {
     local dap = require 'dap'
     local dapui = require 'dapui'
     return {
+      { '<F5>', dap.continue, desc = 'Debug: Start/Continue' },
+      { '<F10>', dap.step_over, desc = 'Debug: Step Over' },
+      { '<F11>', dap.step_into, desc = 'Debug: Step Into' },
+      { '<S-F11>', dap.step_out, desc = 'Debug: Step Out' },
       {
-        '<F5>',
+        '<leader>dr',
         function()
-          dap.continue()
-          vim.defer_fn(function()
-            if dap.status() == '' then
-              vim.notify('Debug session failed to start. Check DAP logs with :DapShowLog', vim.log.levels.ERROR)
-            end
-          end, 5000)
-        end,
-        desc = 'Debug: Start/Continue',
-      },
-      { '<F1>', dap.step_into, desc = 'Debug: Step Into' },
-      { '<F2>', dap.step_over, desc = 'Debug: Step Over' },
-      { '<F3>', dap.step_out, desc = 'Debug: Step Out' },
-      {
-        '<F10>',
-        function()
-          dap.terminate()
-          vim.defer_fn(function()
-            dap.continue()
-          end, 100)
+          dap.restart()
         end,
         desc = 'Debug: Restart',
       },
@@ -58,8 +44,6 @@ return {
         desc = 'Debug: Set Java Main Class',
       },
       { '<F7>', dapui.toggle, desc = 'Debug: Toggle DAP UI' },
-      -- Only include unpack(keys) if you're sure the plugin manager passes keys
-      -- unpack(keys),
     }
   end,
   config = function()
@@ -163,35 +147,28 @@ return {
       },
     }
 
-    -- Lua DAP configuration using lua-language-server (Mason-installed)
-    dap.adapters.lua = {
-      type = 'executable',
-      command = vim.fn.stdpath 'data' .. '/mason/packages/lua-language-server/libexec/bin/lua-language-server',
-      args = { '--stdio' },
-      enrich_config = function(config, on_config)
-        local success, err = pcall(vim.fn.system, { config.command, '--version' })
-        if not success then
-          vim.notify('Error starting Lua adapter: ' .. (err or 'Unknown error'), vim.log.levels.ERROR)
-          return
-        end
-        vim.notify('Lua adapter started successfully', vim.log.levels.INFO)
-        on_config(config)
-      end,
-    }
-    dap.configurations.lua = {
-      {
-        type = 'lua',
-        request = 'launch',
-        name = 'Launch Lua',
-        program = {
-          lua = '/opt/homebrew/bin/lua',
-          file = '${file}',
+    -- Lua DAP configuration (using debugpy-like adapter via Mason)
+    -- Install via Mason: lua-debugpy
+    local lua_path = vim.fn.exepath 'lua' or '/opt/homebrew/bin/lua'
+    if vim.fn.executable 'lua-language-server' == 1 then
+      dap.adapters.lua = {
+        type = 'executable',
+        command = 'lua-language-server',
+        args = { '--stdio' },
+      }
+      dap.configurations.lua = {
+        {
+          type = 'lua',
+          request = 'launch',
+          name = 'Launch Lua',
+          program = function()
+            return lua_path
+          end,
+          args = { '${file}' },
+          cwd = '${workspaceFolder}',
         },
-        cwd = '${workspaceFolder}',
-        stopOnEntry = false,
-        args = {},
-      },
-    }
+      }
+    end
 
     -- Python DAP configuration
     dap.adapters.python = {
@@ -206,7 +183,11 @@ return {
         name = 'Launch file',
         program = '${file}',
         pythonPath = function()
-          return '/Users/jj/myenv/bin/python3'
+          local venv = vim.fn.getenv 'VIRTUAL_ENV'
+          if venv and venv ~= '' then
+            return venv .. '/bin/python3'
+          end
+          return vim.fn.exepath 'python3' or 'python3'
         end,
       },
     }
