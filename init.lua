@@ -745,7 +745,7 @@ require('lazy').setup({
     'hrsh7th/nvim-cmp',
     event = 'InsertEnter',
     dependencies = {
-      'hrsh7th/cmp-omni',
+      -- 'hrsh7th/cmp-omni',
       -- Snippet Engine & its associated nvim-cmp source
       {
         'L3MON4D3/LuaSnip',
@@ -881,7 +881,7 @@ require('lazy').setup({
           { name = 'luasnip' },
           { name = 'path' },
           { name = 'buffer' },
-          { name = 'omni' },
+          -- { name = 'omni' }, -- disabled: slows down nvim
         },
       }
     end,
