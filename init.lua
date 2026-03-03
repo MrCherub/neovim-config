@@ -796,7 +796,28 @@ require('lazy').setup({
           luasnip.insert_node(1, 'Type your question here...'),
           luasnip.text_node { '', '\\end{question}' },
         }),
-        -- You can add more snippets for claim, pitfall, known, etc. here
+        luasnip.snippet('known', {
+          luasnip.text_node { '\\begin{known}', '\t' },
+          luasnip.insert_node(1, 'Type known info here...'),
+          luasnip.text_node { '', '\\end{known}' },
+        }),
+        luasnip.snippet('claim', {
+          luasnip.text_node { '\\begin{claim}{' },
+          luasnip.function_node(timestamp, {}),
+          luasnip.text_node { '}', '\t' },
+          luasnip.insert_node(1, 'Claim title'),
+          luasnip.text_node { '', '\\end{claim}' },
+        }),
+        luasnip.snippet('pitfall', {
+          luasnip.text_node { '\\begin{pitfall}', '\t' },
+          luasnip.insert_node(1, 'Type pitfall here...'),
+          luasnip.text_node { '', '\\end{pitfall}' },
+        }),
+        luasnip.snippet('ebox', {
+          luasnip.text_node { '\\begin{epibox}', '\t' },
+          luasnip.insert_node(1, 'Type your note here...'),
+          luasnip.text_node { '', '\\end{epibox}' },
+        }),
       })
       -- ====================================
 
