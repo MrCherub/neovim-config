@@ -790,9 +790,9 @@ require('lazy').setup({
 
       luasnip.add_snippets('tex', {
         luasnip.snippet('qbox', {
-          luasnip.text_node { '\\begin{question}{' },
+          luasnip.text_node { '\\begin{question}[title=Question: ' },
           luasnip.function_node(timestamp, {}),
-          luasnip.text_node { '}', '\t' },
+          luasnip.text_node { ']', '\t' },
           luasnip.insert_node(1, 'Type your question here...'),
           luasnip.text_node { '', '\\end{question}' },
         }),
