@@ -7,14 +7,23 @@ return {
     local wave_buf = nil
     local wave_phase = 0
     local wave_token = 0
+    local sparkle_tick = 0
+    local sparkle_candidates = {}
+    local active_sparkles = {}
 
     local wave_colors = {
-      '#00e5ff',
-      '#38bdf8',
+      '#0891b2',
+      '#0ea5c6',
       '#22d3ee',
-      '#00d4aa',
-      '#7afcff',
+      '#4fe3f7',
+      '#7defff',
+      '#b8f6ff',
+      '#dffcff',
+      '#ffffff',
     }
+    local sparkle_hls = { 'DashboardSparkle1', 'DashboardSparkle2', 'DashboardSparkle3' }
+
+    math.randomseed(vim.uv.hrtime())
 
     local function stop_dashboard_wave()
       wave_token = wave_token + 1
@@ -22,6 +31,38 @@ return {
         vim.api.nvim_buf_clear_namespace(wave_buf, wave_ns, 0, -1)
       end
       wave_buf = nil
+      sparkle_candidates = {}
+      active_sparkles = {}
+      sparkle_tick = 0
+    end
+
+    local function refresh_sparkles()
+      sparkle_tick = sparkle_tick + 1
+
+      local next_sparkles = {}
+      for _, sparkle in ipairs(active_sparkles) do
+        sparkle.age = sparkle.age + 1
+        if sparkle.age <= sparkle.ttl then
+          next_sparkles[#next_sparkles + 1] = sparkle
+        end
+      end
+      active_sparkles = next_sparkles
+
+      if sparkle_tick % 3 ~= 0 or #sparkle_candidates == 0 then
+        return
+      end
+
+      local target_count = 5
+      while #active_sparkles < target_count do
+        local candidate = sparkle_candidates[math.random(#sparkle_candidates)]
+        active_sparkles[#active_sparkles + 1] = {
+          lnum = candidate.lnum,
+          start_col = candidate.start_col,
+          end_col = candidate.end_col,
+          age = 0,
+          ttl = 3,
+        }
+      end
     end
 
     local function paint_dashboard_wave(buf)
@@ -34,6 +75,7 @@ return {
       local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
       local max_lines = math.min(#lines, 45)
       local found_art = false
+      sparkle_candidates = {}
 
       for lnum = 1, max_lines do
         local line = lines[lnum]
@@ -54,11 +96,24 @@ return {
             -- Only animate active braille dots from the art.
             -- U+2800 is blank braille and should stay untouched.
             if codepoint >= 0x2801 and codepoint <= 0x28FF then
-              local hl_idx = ((ci + lnum + wave_phase) % #wave_colors) + 1
+              sparkle_candidates[#sparkle_candidates + 1] = {
+                lnum = lnum - 1,
+                start_col = start_col,
+                end_col = end_col,
+              }
+              local wave_value = math.sin((ci / 6) + (wave_phase / 5))
+              local normalized = (wave_value + 1) / 2
+              local hl_idx = math.min(#wave_colors, math.floor(normalized * (#wave_colors - 1)) + 1)
               vim.api.nvim_buf_add_highlight(buf, wave_ns, 'DashboardWave' .. hl_idx, lnum - 1, start_col, end_col)
             end
           end
         end
+      end
+
+      refresh_sparkles()
+      for _, sparkle in ipairs(active_sparkles) do
+        local hl = sparkle_hls[math.min(sparkle.age + 1, #sparkle_hls)]
+        vim.api.nvim_buf_add_highlight(buf, wave_ns, hl, sparkle.lnum, sparkle.start_col, sparkle.end_col)
       end
 
       wave_phase = wave_phase + 1
@@ -75,7 +130,7 @@ return {
         end
         paint_dashboard_wave(wave_buf)
         tick_dashboard_wave(token)
-      end, 100)
+      end, 120)
     end
 
     local function start_dashboard_wave(buf)
@@ -282,6 +337,9 @@ return {
         for idx, color in ipairs(wave_colors) do
           vim.api.nvim_set_hl(0, 'DashboardWave' .. idx, { fg = color })
         end
+        vim.api.nvim_set_hl(0, 'DashboardSparkle1', { fg = '#dffcff', bold = true })
+        vim.api.nvim_set_hl(0, 'DashboardSparkle2', { fg = '#ffffff', bold = true })
+        vim.api.nvim_set_hl(0, 'DashboardSparkle3', { fg = '#dffcff', bold = true })
 
         -- General
         vim.api.nvim_set_hl(0, 'DashboardHeader', { fg = '#ffffff', bg = 'NONE' }) -- Header color
