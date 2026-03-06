@@ -34,6 +34,17 @@ return {
     'nvim-lualine/lualine.nvim',
     dependencies = { 'nvim-tree/nvim-web-devicons' }, -- Optional for icons
     config = function()
+      local function noice_recording_component()
+        local ok, noice = pcall(require, 'noice')
+        if not ok or not noice.api or not noice.api.status or not noice.api.status.mode then
+          return ''
+        end
+        if not noice.api.status.mode.has() then
+          return ''
+        end
+        return noice.api.status.mode.get()
+      end
+
       local wave_colors = {
         '#6d8fe8',
         '#7aa2f7',
@@ -152,7 +163,15 @@ return {
               },
             },
           },
-          lualine_x = { 'encoding', 'fileformat', 'filetype' },
+          lualine_x = {
+            {
+              noice_recording_component,
+              color = { fg = colors.red, bg = colors.grey, gui = 'bold' },
+            },
+            'encoding',
+            'fileformat',
+            'filetype',
+          },
           lualine_y = { 'progress' },
           lualine_z = { { 'location', separator = { right = '' }, left_padding = 2 } },
         },
