@@ -792,36 +792,129 @@ require('lazy').setup({
       local timestamp = function()
         return os.date '%Y%m%d%H%M'
       end
+      local zettel_id = nil
+      local linked_timestamp = function()
+        if not zettel_id then
+          zettel_id = timestamp()
+        end
+        return zettel_id
+      end
+      local reset_zettel_id = function()
+        zettel_id = nil
+        return ''
+      end
 
       luasnip.add_snippets('tex', {
         luasnip.snippet('qbox', {
           luasnip.text_node { '\\begin{question}[title=Question: ' },
+          luasnip.function_node(timestamp, {}),
+          luasnip.text_node { ']', '\t[id=' },
           luasnip.function_node(timestamp, {}),
           luasnip.text_node { ']', '\t' },
           luasnip.insert_node(1, 'Type your question here...'),
           luasnip.text_node { '', '\\end{question}' },
         }),
         luasnip.snippet('known', {
-          luasnip.text_node { '\\begin{known}', '\t' },
-          luasnip.insert_node(1, 'Type known info here...'),
+          luasnip.text_node { '\\begin{known}', '\t[id=' },
+          luasnip.function_node(timestamp, {}),
+          luasnip.text_node { '][title=' },
+          luasnip.insert_node(1, 'Known'),
+          luasnip.text_node { ']', '\t' },
+          luasnip.insert_node(2, 'Type known info here...'),
           luasnip.text_node { '', '\\end{known}' },
         }),
         luasnip.snippet('claim', {
           luasnip.text_node { '\\begin{claim}{' },
-          luasnip.function_node(timestamp, {}),
-          luasnip.text_node { '}', '\t' },
           luasnip.insert_node(1, 'Claim title'),
+          luasnip.text_node { '}', '\t[id=' },
+          luasnip.function_node(timestamp, {}),
+          luasnip.text_node { ']', '\t' },
+          luasnip.insert_node(2, 'Claim body'),
           luasnip.text_node { '', '\\end{claim}' },
         }),
         luasnip.snippet('pitfall', {
-          luasnip.text_node { '\\begin{pitfall}', '\t' },
-          luasnip.insert_node(1, 'Type pitfall here...'),
+          luasnip.text_node { '\\begin{pitfall}', '\t[id=' },
+          luasnip.function_node(timestamp, {}),
+          luasnip.text_node { '][title=' },
+          luasnip.insert_node(1, 'Pitfall'),
+          luasnip.text_node { ']', '\t' },
+          luasnip.insert_node(2, 'Type pitfall here...'),
           luasnip.text_node { '', '\\end{pitfall}' },
         }),
         luasnip.snippet('ebox', {
-          luasnip.text_node { '\\begin{epibox}', '\t' },
-          luasnip.insert_node(1, 'Type your note here...'),
+          luasnip.text_node { '\\begin{epibox}', '\t[id=' },
+          luasnip.function_node(timestamp, {}),
+          luasnip.text_node { '][title=' },
+          luasnip.insert_node(1, 'Note'),
+          luasnip.text_node { ']', '\t' },
+          luasnip.insert_node(2, 'Type your note here...'),
           luasnip.text_node { '', '\\end{epibox}' },
+        }),
+      })
+
+      luasnip.add_snippets('markdown', {
+        luasnip.snippet('zettel', {
+          luasnip.function_node(reset_zettel_id, {}),
+          luasnip.text_node {
+            '---',
+            'zettel_id: ',
+          },
+          luasnip.function_node(linked_timestamp, {}),
+          luasnip.text_node {
+            '',
+            'aliases: []',
+            'tags:',
+            '  - zettel',
+            'epibox_id: ',
+          },
+          luasnip.function_node(linked_timestamp, {}),
+          luasnip.text_node {
+            '',
+            'epibox_type: note',
+            '---',
+            '',
+            '# ',
+          },
+          luasnip.insert_node(1, 'Zettel title'),
+          luasnip.text_node {
+            '',
+            '',
+            '## Note',
+          },
+          luasnip.insert_node(2, 'Write the zettel here...'),
+        }),
+        luasnip.snippet('zlink', {
+          luasnip.text_node {
+            '---',
+            'zettel_id: ',
+          },
+          luasnip.insert_node(1, '202603061130'),
+          luasnip.text_node {
+            '',
+            'aliases: []',
+            'tags:',
+            '  - zettel',
+            'epibox_id: ',
+          },
+          luasnip.insert_node(2, '202603061130'),
+          luasnip.text_node {
+            '',
+            'epibox_type: ',
+          },
+          luasnip.insert_node(3, 'note'),
+          luasnip.text_node {
+            '',
+            '---',
+            '',
+            '# ',
+          },
+          luasnip.insert_node(4, 'Linked zettel'),
+          luasnip.text_node {
+            '',
+            '',
+            '## Note',
+          },
+          luasnip.insert_node(5, ''),
         }),
       })
       -- ====================================
