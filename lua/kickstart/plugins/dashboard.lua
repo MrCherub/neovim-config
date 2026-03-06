@@ -99,6 +99,9 @@ return {
 
     db.setup {
       theme = 'doom',
+      hide = {
+        statusline = false,
+      },
       config = {
         --         header = {
         --           '',
