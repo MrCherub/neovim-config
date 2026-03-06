@@ -307,6 +307,14 @@ return {
       end,
     })
 
+    vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
+      callback = function(ev)
+        if vim.api.nvim_buf_is_valid(ev.buf) and vim.bo[ev.buf].filetype == 'dashboard' then
+          start_dashboard_wave(ev.buf)
+        end
+      end,
+    })
+
     vim.api.nvim_create_autocmd({ 'BufLeave', 'BufWipeout', 'VimLeavePre' }, {
       callback = function(ev)
         if wave_buf and ev.buf == wave_buf then
