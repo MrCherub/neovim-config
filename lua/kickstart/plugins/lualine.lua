@@ -57,6 +57,7 @@ return {
         '#b7a3ff',
       }
       local wave_hl_prefix = 'LualineWaveName'
+      local wave_idle_hl = 'LualineWaveIdle'
       local wave_phase = 0
       local wave_visible = true
       local wave_tick = 0
@@ -66,8 +67,9 @@ return {
       for idx, color in ipairs(wave_colors) do
         vim.api.nvim_set_hl(0, wave_hl_prefix .. idx, { fg = color, bg = colors.grey, bold = true })
       end
+      vim.api.nvim_set_hl(0, wave_idle_hl, { fg = colors.violet, bg = colors.grey, bold = true })
 
-      local function wave_name_text(name)
+      local function wave_name_text(name, animate)
         local out = {}
         local chars = vim.fn.strchars(name)
         for ci = 0, chars - 1 do
@@ -77,8 +79,12 @@ return {
           if ch == '%' then
             ch = '%%'
           end
-          local hl_idx = ((ci + wave_phase) % #wave_colors) + 1
-          out[#out + 1] = ('%%#%s%d#%s'):format(wave_hl_prefix, hl_idx, ch)
+          if animate then
+            local hl_idx = ((ci + wave_phase) % #wave_colors) + 1
+            out[#out + 1] = ('%%#%s%d#%s'):format(wave_hl_prefix, hl_idx, ch)
+          else
+            out[#out + 1] = ('%%#%s#%s'):format(wave_idle_hl, ch)
+          end
         end
         out[#out + 1] = '%*'
         return table.concat(out)
@@ -147,8 +153,8 @@ return {
               end,
               fmt = function(name, buf)
                 local is_normal_mode = vim.api.nvim_get_mode().mode:sub(1, 1) == 'n'
-                if is_normal_mode and wave_visible and buf and buf.is_current and buf:is_current() then
-                  return wave_name_text(name)
+                if is_normal_mode and buf and buf.is_current and buf:is_current() then
+                  return wave_name_text(name, wave_visible)
                 end
                 return name
               end,
