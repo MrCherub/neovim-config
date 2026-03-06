@@ -1029,6 +1029,7 @@ require('lazy').setup({
   require 'kickstart.plugins.neominimap',
   require 'kickstart.plugins.codecompanion',
   require 'kickstart.plugins.typr',
+  require 'kickstart.plugins.trouble',
   -- require 'kickstart.plugins.precognition',
   -- require 'kickstart.plugins.harpoon',
   -- require 'kickstart.plugins.leap',
