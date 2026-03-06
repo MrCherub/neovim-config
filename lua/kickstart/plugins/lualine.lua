@@ -47,6 +47,10 @@ return {
       }
       local wave_hl_prefix = 'LualineWaveName'
       local wave_phase = 0
+      local wave_visible = true
+      local wave_tick = 0
+      local wave_interval_ms = 340
+      local wave_toggle_ticks = 4
 
       for idx, color in ipairs(wave_colors) do
         vim.api.nvim_set_hl(0, wave_hl_prefix .. idx, { fg = color, bg = colors.grey, bold = true })
@@ -72,11 +76,20 @@ return {
       local wave_timer = vim.uv.new_timer()
       wave_timer:start(
         0,
-        130,
+        wave_interval_ms,
         vim.schedule_wrap(function()
           local mode = vim.api.nvim_get_mode().mode
           if mode:sub(1, 1) == 'n' then
-            wave_phase = wave_phase + 1
+            wave_tick = wave_tick + 1
+            if wave_visible then
+              wave_phase = wave_phase + 1
+            end
+            if wave_tick % wave_toggle_ticks == 0 then
+              wave_visible = not wave_visible
+            end
+          else
+            wave_visible = true
+            wave_tick = 0
           end
           local ok, lualine = pcall(require, 'lualine')
           if ok then
@@ -123,7 +136,7 @@ return {
               end,
               fmt = function(name, buf)
                 local is_normal_mode = vim.api.nvim_get_mode().mode:sub(1, 1) == 'n'
-                if is_normal_mode and buf and buf.is_current and buf:is_current() then
+                if is_normal_mode and wave_visible and buf and buf.is_current and buf:is_current() then
                   return wave_name_text(name)
                 end
                 return name
