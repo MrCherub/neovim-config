@@ -176,6 +176,9 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 -- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
 -- or just use <C-\><C-n> to exit terminal mode
 vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+vim.keymap.set('n', '<leader>zn', '<cmd>ZettelNew<CR>', { desc = '[Z]ettel [N]ew' })
+vim.keymap.set('n', '<leader>zh', '<cmd>ZettelHub<CR>', { desc = '[Z]ettel [H]ub' })
+vim.keymap.set('n', '<leader>zl', '<cmd>ZettelLink<CR>', { desc = '[Z]ettel [L]ink' })
 
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
@@ -205,6 +208,142 @@ vim.api.nvim_create_autocmd('TextYankPost', {
     vim.highlight.on_yank()
   end,
 })
+
+local function zettel_timestamp()
+  return os.date '%Y%m%d%H%M'
+end
+
+local function zettel_slug(title)
+  local slug = title:lower()
+  slug = slug:gsub("[%'`’]", '')
+  slug = slug:gsub('[^%w%s-]', ' ')
+  slug = slug:gsub('%s+', '-')
+  slug = slug:gsub('%-+', '-')
+  slug = slug:gsub('^%-', '')
+  slug = slug:gsub('%-$', '')
+  if slug == '' then
+    return zettel_timestamp()
+  end
+  return slug
+end
+
+local function zettel_lines(spec)
+  local lines = {
+    '---',
+    'zettel_id: ' .. spec.zettel_id,
+    'aliases:',
+    '  - ' .. spec.title,
+    'tags:',
+    '  - zettel',
+  }
+
+  if spec.epibox_id and spec.epibox_id ~= '' then
+    table.insert(lines, 'epibox_id: ' .. spec.epibox_id)
+  end
+
+  if spec.epibox_type and spec.epibox_type ~= '' then
+    table.insert(lines, 'epibox_type: ' .. spec.epibox_type)
+  end
+
+  vim.list_extend(lines, {
+    '---',
+    '',
+    '# ' .. spec.title,
+    '',
+    '## Note',
+    spec.note or '',
+  })
+
+  return lines
+end
+
+local function create_zettel(spec)
+  local dir = vim.fs.normalize(vim.fn.expand '~/ObsidianVault/zettels')
+  local slug = zettel_slug(spec.title)
+  local path = vim.fs.joinpath(dir, slug .. '.md')
+
+  vim.fn.mkdir(dir, 'p')
+
+  if (vim.uv or vim.loop).fs_stat(path) then
+    path = vim.fs.joinpath(dir, string.format('%s-%s.md', slug, spec.zettel_id))
+  end
+
+  vim.fn.writefile(zettel_lines(spec), path)
+  vim.cmd.edit(vim.fn.fnameescape(path))
+end
+
+local function prompt_zettel(spec)
+  if spec.title and spec.title ~= '' then
+    spec.on_title(spec.title)
+    return
+  end
+
+  vim.ui.input({ prompt = 'Zettel title: ' }, function(title)
+    if not title or vim.trim(title) == '' then
+      return
+    end
+    spec.on_title(vim.trim(title))
+  end)
+end
+
+local function create_plain_zettel(title)
+  create_zettel {
+    zettel_id = zettel_timestamp(),
+    title = title,
+  }
+end
+
+local function create_hub_zettel(title)
+  local id = zettel_timestamp()
+  create_zettel {
+    zettel_id = id,
+    epibox_id = id,
+    epibox_type = 'note',
+    title = title,
+  }
+end
+
+local function create_linked_zettel(title)
+  vim.ui.input({ prompt = 'Epibox ID: ' }, function(epibox_id)
+    if not epibox_id or vim.trim(epibox_id) == '' then
+      return
+    end
+
+    vim.ui.input({ prompt = 'Epibox type: ', default = 'note' }, function(epibox_type)
+      if not epibox_type or vim.trim(epibox_type) == '' then
+        return
+      end
+
+      create_zettel {
+        zettel_id = zettel_timestamp(),
+        epibox_id = vim.trim(epibox_id),
+        epibox_type = vim.trim(epibox_type),
+        title = title,
+      }
+    end)
+  end)
+end
+
+vim.api.nvim_create_user_command('ZettelNew', function(opts)
+  prompt_zettel {
+    title = vim.trim(opts.args),
+    on_title = create_plain_zettel,
+  }
+end, { nargs = '*', desc = 'Create a zettel with a readable slug filename' })
+
+vim.api.nvim_create_user_command('ZettelHub', function(opts)
+  prompt_zettel {
+    title = vim.trim(opts.args),
+    on_title = create_hub_zettel,
+  }
+end, { nargs = '*', desc = 'Create a hub zettel linked to its own Epibox ID' })
+
+vim.api.nvim_create_user_command('ZettelLink', function(opts)
+  prompt_zettel {
+    title = vim.trim(opts.args),
+    on_title = create_linked_zettel,
+  }
+end, { nargs = '*', desc = 'Create a zettel linked to an existing Epibox ID' })
 
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
@@ -322,6 +461,7 @@ require('lazy').setup({
         { '<leader>s', group = '[S]earch' },
         { '<leader>w', group = '[W]orkspace' },
         { '<leader>t', group = '[T]oggle' },
+        { '<leader>z', group = '[Z]ettel' },
         { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
       },
     },
