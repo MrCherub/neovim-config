@@ -1,3 +1,8 @@
+
+
+
+https://github.com/user-attachments/assets/4cc063f0-97c0-48dd-811c-eadcd3e55b2d
+
 # kickstart.nvim
 
 ## Introduction
