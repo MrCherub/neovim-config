@@ -278,8 +278,6 @@ return {
 
 
 
-
-
         ]],
         center = {
           {
@@ -303,6 +301,16 @@ return {
             key_hl = 'DashboardKeyHighlight',
             key_format = ' %s', -- remove default surrounding `[]`
             -- action = 'lua print(3)', -- action when pressed
+          },
+          {
+            icon = '󰒲 ',
+            icon_hl = 'Title',
+            desc = 'Lazy',
+            desc_hl = 'DashboardWhiteText',
+            key = 'l',
+            keymap = 'SPC s ',
+            key_hl = 'DashboardKeyHighlight',
+            key_format = ' %s',
           },
           {
             icon = ' ',
