@@ -179,6 +179,7 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 vim.keymap.set('n', '<leader>zn', '<cmd>ZettelNew<CR>', { desc = '[Z]ettel [N]ew' })
 vim.keymap.set('n', '<leader>zh', '<cmd>ZettelHub<CR>', { desc = '[Z]ettel [H]ub' })
 vim.keymap.set('n', '<leader>zl', '<cmd>ZettelLink<CR>', { desc = '[Z]ettel [L]ink' })
+vim.keymap.set('n', '<leader>zb', '<cmd>ZettelBranch<CR>', { desc = '[Z]ettel [B]ranch' })
 
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
@@ -228,14 +229,18 @@ local function zettel_slug(title)
 end
 
 local function zettel_lines(spec)
+  local tags = spec.tags or { 'zettel' }
   local lines = {
     '---',
     'zettel_id: ' .. spec.zettel_id,
     'aliases:',
     '  - ' .. spec.title,
     'tags:',
-    '  - zettel',
   }
+
+  for _, tag in ipairs(tags) do
+    table.insert(lines, '  - ' .. tag)
+  end
 
   if spec.epibox_id and spec.epibox_id ~= '' then
     table.insert(lines, 'epibox_id: ' .. spec.epibox_id)
@@ -270,6 +275,143 @@ local function create_zettel(spec)
 
   vim.fn.writefile(zettel_lines(spec), path)
   vim.cmd.edit(vim.fn.fnameescape(path))
+  return {
+    path = path,
+    stem = vim.fs.basename(path):gsub('%.md$', ''),
+  }
+end
+
+local function parse_zettel_metadata(lines)
+  local metadata = {
+    tags = {},
+  }
+  local in_frontmatter = false
+  local in_tags = false
+
+  for _, line in ipairs(lines) do
+    if line == '---' then
+      if not in_frontmatter then
+        in_frontmatter = true
+      else
+        break
+      end
+    elseif in_frontmatter then
+      if line == 'tags:' then
+        in_tags = true
+      elseif in_tags and line:match '^%s*%- ' then
+        table.insert(metadata.tags, vim.trim(line:gsub('^%s*%- ', '', 1)))
+      else
+        in_tags = false
+        local key, value = line:match '^([%w_]+):%s*(.*)$'
+        if key then
+          metadata[key] = value
+        end
+      end
+    end
+  end
+
+  return metadata
+end
+
+local function current_zettel_context()
+  local buf = vim.api.nvim_get_current_buf()
+  local path = vim.api.nvim_buf_get_name(buf)
+  local normalized = vim.fs.normalize(path)
+  local zettel_dir = vim.fs.normalize(vim.fn.expand '~/ObsidianVault/zettels')
+
+  if vim.bo[buf].filetype ~= 'markdown' or not normalized:find(zettel_dir, 1, true) then
+    vim.notify('Open a zettel in ~/ObsidianVault/zettels to create a branch note.', vim.log.levels.WARN)
+    return nil
+  end
+
+  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local metadata = parse_zettel_metadata(lines)
+  local title
+
+  for _, line in ipairs(lines) do
+    if line:match '^# ' then
+      title = vim.trim(line:sub(3))
+      break
+    end
+  end
+
+  if not title or title == '' then
+    vim.notify('Current zettel is missing a markdown title.', vim.log.levels.WARN)
+    return nil
+  end
+
+  return {
+    buf = buf,
+    path = normalized,
+    stem = vim.fs.basename(normalized):gsub('%.md$', ''),
+    title = title,
+    lines = lines,
+    metadata = metadata,
+  }
+end
+
+local function topic_tags(tags)
+  local selected = {}
+  local skip = {
+    zettel = true,
+    hub = true,
+    branch = true,
+  }
+
+  for _, tag in ipairs(tags or {}) do
+    if tag ~= '' and not skip[tag] then
+      table.insert(selected, tag)
+    end
+  end
+
+  return selected
+end
+
+local function collect_branch_links(lines)
+  local links = {}
+  local in_branch_notes = false
+
+  for _, line in ipairs(lines) do
+    if line == '## Branch Notes' then
+      in_branch_notes = true
+    elseif in_branch_notes and line:match '^## ' then
+      break
+    elseif in_branch_notes then
+      local target, alias = line:match '^%- %[%[([^]|#]+)[^|%]]*(|([^%]]+))?%]%]'
+      if target then
+        table.insert(links, {
+          target = target,
+          alias = alias or target,
+        })
+      end
+    end
+  end
+
+  return links
+end
+
+local function append_branch_to_hub(ctx, branch)
+  local insertion_index
+  local lines = vim.deepcopy(ctx.lines)
+
+  for idx, line in ipairs(lines) do
+    if line == '## Branch Notes' then
+      insertion_index = idx + 1
+      while insertion_index <= #lines and lines[insertion_index]:match '^%- ' do
+        insertion_index = insertion_index + 1
+      end
+      break
+    end
+  end
+
+  if not insertion_index then
+    vim.notify('Current zettel does not have a ## Branch Notes section.', vim.log.levels.WARN)
+    return false
+  end
+
+  table.insert(lines, insertion_index, string.format('- [[%s|%s]]', branch.stem, branch.title))
+  vim.api.nvim_buf_set_lines(ctx.buf, 0, -1, false, lines)
+  return true
 end
 
 local function prompt_zettel(spec)
@@ -344,6 +486,62 @@ vim.api.nvim_create_user_command('ZettelLink', function(opts)
     on_title = create_linked_zettel,
   }
 end, { nargs = '*', desc = 'Create a zettel linked to an existing Epibox ID' })
+
+vim.api.nvim_create_user_command('ZettelBranch', function(opts)
+  local ctx = current_zettel_context()
+  if not ctx then
+    return
+  end
+
+  prompt_zettel {
+    title = vim.trim(opts.args),
+    on_title = function(title)
+      local branch_tags = { 'zettel', 'branch' }
+      local inherited_tags = topic_tags(ctx.metadata.tags)
+      local sibling_links = collect_branch_links(ctx.lines)
+      local branch_id = zettel_timestamp()
+      local note_lines = {
+        string.format('Branch note from [[%s|%s]].', ctx.stem, ctx.title),
+        '',
+        'Focus: ',
+        '',
+        '## See Also',
+        '',
+      }
+
+      for _, tag in ipairs(inherited_tags) do
+        table.insert(branch_tags, tag)
+      end
+
+      for _, link in ipairs(sibling_links) do
+        table.insert(note_lines, string.format('- [[%s|%s]]', link.target, link.alias))
+      end
+
+      table.insert(note_lines, string.format('- [[%s|%s]]', ctx.stem, ctx.title))
+
+      local unique_tags = {}
+      local seen = {}
+      for _, tag in ipairs(branch_tags) do
+        if not seen[tag] then
+          seen[tag] = true
+          table.insert(unique_tags, tag)
+        end
+      end
+
+      local created = create_zettel {
+        zettel_id = branch_id,
+        title = title,
+        note = table.concat(note_lines, '\n'),
+        tags = unique_tags,
+      }
+
+      append_branch_to_hub(ctx, {
+        stem = created.stem,
+        title = title,
+      })
+    end,
+  }
+end, { nargs = '*', desc = 'Create a branch zettel from the current hub note' })
 
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
