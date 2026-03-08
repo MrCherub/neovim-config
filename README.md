@@ -5,6 +5,15 @@ https://github.com/user-attachments/assets/4cc063f0-97c0-48dd-811c-eadcd3e55b2d
 
 # kickstart.nvim
 
+## Repo Notes
+
+This fork now includes a treesitter migration on top of Kickstart:
+
+- `nvim-treesitter` was moved from the legacy `configs.setup(...)` API to the newer `main` branch API.
+- Treesitter startup is explicit now: parsers are installed on demand, buffers attach via `vim.treesitter.start(...)`, and indentation uses `require('nvim-treesitter').indentexpr()`.
+- `Neovim 0.11+` is now the expected minimum for this config.
+- Telescope previewers are back on treesitter, with a repo-local `lua` highlights override for `Neovim 0.11.6` so previewing `init.lua` does not crash on the newer query set.
+
 ## Introduction
 
 A starting point for Neovim that is:
@@ -235,4 +244,3 @@ sudo dnf install -y gcc make git ripgrep fd-find unzip neovim
 sudo pacman -S --noconfirm --needed gcc make git ripgrep fd unzip neovim
 ```
 </details>
-
