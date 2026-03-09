@@ -35,6 +35,7 @@ return {
     dependencies = { 'nvim-tree/nvim-web-devicons' }, -- Optional for icons
     config = function()
       local file_time = require 'kickstart.file_time'
+      local git_status = require 'kickstart.git_status'
 
       local function noice_recording_component()
         local ok, noice = pcall(require, 'noice')
@@ -48,6 +49,7 @@ return {
       end
 
       file_time.setup()
+      git_status.setup()
 
       local wave_colors = {
         '#6d8fe8',
@@ -132,11 +134,35 @@ return {
       })
 
       vim.api.nvim_set_hl(0, 'LualineFileTime', { fg = colors.black, bg = colors.cyan, bold = true })
+      vim.api.nvim_set_hl(0, 'LualineGitBranch', { fg = colors.black, bg = colors.cyan, bold = true })
+      vim.api.nvim_set_hl(0, 'LualineGitDirty', { fg = colors.black, bg = '#a6e3a1', bold = true })
+      vim.api.nvim_set_hl(0, 'LualineGitClean', { fg = colors.black, bg = colors.cyan, bold = true })
 
       local function file_time_component()
         local winid = tonumber(vim.g.statusline_winid) or 0
         local bufnr = winid ~= 0 and vim.api.nvim_win_get_buf(winid) or vim.api.nvim_get_current_buf()
         return file_time.get_display(bufnr)
+      end
+
+      local function git_branch_component()
+        local winid = tonumber(vim.g.statusline_winid) or 0
+        local branch = git_status.get(winid)
+        if not branch or branch == '' then
+          return ''
+        end
+        return (' %s'):format(branch)
+      end
+
+      local function git_dirty_component()
+        local winid = tonumber(vim.g.statusline_winid) or 0
+        local _, changed = git_status.get(winid)
+        if changed == nil then
+          return ''
+        end
+        if changed > 0 then
+          return (' %d'):format(changed)
+        end
+        return '󰄬 clean'
       end
 
       require('lualine').setup {
@@ -220,6 +246,25 @@ return {
           lualine_x = {},
           lualine_y = {},
           lualine_z = {
+            {
+              git_branch_component,
+              separator = { left = '', right = '' },
+              color = 'LualineGitBranch',
+              padding = { left = 0, right = 0 },
+            },
+            {
+              git_dirty_component,
+              separator = { left = '', right = '' },
+              color = function()
+                local winid = tonumber(vim.g.statusline_winid) or 0
+                local _, changed = git_status.get(winid)
+                if changed and changed > 0 then
+                  return 'LualineGitDirty'
+                end
+                return 'LualineGitClean'
+              end,
+              padding = { left = 0, right = 0 },
+            },
             {
               file_time_component,
               separator = { left = '', right = '' },
