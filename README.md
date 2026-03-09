@@ -1,7 +1,8 @@
 
+<img width="1415" height="854" alt="Screenshot 2026-03-09 at 1 53 36 AM" src="https://github.com/user-attachments/assets/20dbbf77-35d8-49ca-9c76-258ba7a14bb9" />
 
+https://github.com/user-attachments/assets/7000ecfb-4a21-4513-a635-3280c3abdd0f
 
-https://github.com/user-attachments/assets/4cc063f0-97c0-48dd-811c-eadcd3e55b2d
 
 # kickstart.nvim
 
