@@ -34,6 +34,8 @@ return {
     'nvim-lualine/lualine.nvim',
     dependencies = { 'nvim-tree/nvim-web-devicons' }, -- Optional for icons
     config = function()
+      local file_time = require 'kickstart.file_time'
+
       local function noice_recording_component()
         local ok, noice = pcall(require, 'noice')
         if not ok or not noice.api or not noice.api.status or not noice.api.status.mode then
@@ -44,6 +46,8 @@ return {
         end
         return noice.api.status.mode.get()
       end
+
+      file_time.setup()
 
       local wave_colors = {
         '#6d8fe8',
@@ -118,6 +122,7 @@ return {
 
       vim.api.nvim_create_autocmd('VimLeavePre', {
         callback = function()
+          file_time.stop()
           if wave_timer then
             wave_timer:stop()
             wave_timer:close()
@@ -126,12 +131,31 @@ return {
         end,
       })
 
+      vim.api.nvim_set_hl(0, 'LualineFileTime', { fg = colors.black, bg = colors.cyan, bold = true })
+
+      local function file_time_component()
+        local winid = tonumber(vim.g.statusline_winid) or 0
+        local bufnr = winid ~= 0 and vim.api.nvim_win_get_buf(winid) or vim.api.nvim_get_current_buf()
+        return file_time.get_display(bufnr)
+      end
+
       require('lualine').setup {
         options = {
           theme = bubbles_theme,
           icons_enabled = true,
           component_separators = { left = '|', right = '|' },
           section_separators = { left = '', right = '' },
+          disabled_filetypes = {
+            winbar = {
+              'dashboard',
+              'TelescopePrompt',
+              'neo-tree',
+              'lazy',
+              'mason',
+              'help',
+              'qf',
+            },
+          },
           statusline = {},
           winbar = {},
         },
@@ -189,6 +213,22 @@ return {
           lualine_y = {},
           lualine_z = { 'location' },
         },
+        winbar = {
+          lualine_a = {},
+          lualine_b = {},
+          lualine_c = {},
+          lualine_x = {},
+          lualine_y = {},
+          lualine_z = {
+            {
+              file_time_component,
+              separator = { left = '', right = '' },
+              color = 'LualineFileTime',
+              padding = { left = 0, right = 0 },
+            },
+          },
+        },
+        inactive_winbar = {},
         -- tabline = {
         --   lualine_a = {}, -- Buffer list should remain in tabline
         --   lualine_b = {},

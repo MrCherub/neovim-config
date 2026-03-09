@@ -25,6 +25,108 @@ return {
 
     math.randomseed(vim.uv.hrtime())
 
+    local function statusline_escape(text)
+      return (text or ''):gsub('%%', '%%%%')
+    end
+
+    local function ensure_dashboard_winhighlight(winid)
+      if not winid or not vim.api.nvim_win_is_valid(winid) then
+        return
+      end
+
+      local current = vim.wo[winid].winhighlight or ''
+      local parts = {}
+      local saw_winbar = false
+      local saw_winbar_nc = false
+
+      for entry in current:gmatch '[^,]+' do
+        if not vim.startswith(entry, 'WinBar:') and not vim.startswith(entry, 'WinBarNC:') then
+          parts[#parts + 1] = entry
+        else
+          saw_winbar = saw_winbar or vim.startswith(entry, 'WinBar:')
+          saw_winbar_nc = saw_winbar_nc or vim.startswith(entry, 'WinBarNC:')
+        end
+      end
+
+      parts[#parts + 1] = 'WinBar:Normal'
+      parts[#parts + 1] = 'WinBarNC:Normal'
+      vim.wo[winid].winhighlight = table.concat(parts, ',')
+    end
+
+    local function dashboard_git_winbar(branch, changed)
+      local parts = { '%=' }
+
+      if branch and branch ~= '' then
+        parts[#parts + 1] = ('%%#DashboardGitBubbleEdge#%%#DashboardGitBubble#  %s %%#DashboardGitBubbleEdge#%%*'):format(statusline_escape(branch))
+      end
+
+      if changed ~= nil then
+        local hl = changed > 0 and 'DashboardGitDirtyBubble' or 'DashboardGitCleanBubble'
+        local edge_hl = changed > 0 and 'DashboardGitDirtyEdge' or 'DashboardGitCleanEdge'
+        local label = changed > 0 and (' %d'):format(changed) or '󰄬 clean'
+        parts[#parts + 1] = (' %%#%s#%%#%s# %s %%#%s#%%*'):format(edge_hl, hl, statusline_escape(label), edge_hl)
+      end
+
+      return table.concat(parts)
+    end
+
+    local function set_dashboard_winbar(winid, branch, changed)
+      if not winid or not vim.api.nvim_win_is_valid(winid) then
+        return
+      end
+
+      ensure_dashboard_winhighlight(winid)
+      vim.wo[winid].winbar = dashboard_git_winbar(branch, changed)
+    end
+
+    local function refresh_dashboard_git(winid)
+      if not winid or not vim.api.nvim_win_is_valid(winid) then
+        return
+      end
+
+      local cwd = vim.api.nvim_win_call(winid, function()
+        return vim.fn.getcwd()
+      end)
+      if cwd == '' then
+        vim.schedule(function()
+          if vim.api.nvim_win_is_valid(winid) then
+            vim.wo[winid].winbar = ''
+          end
+        end)
+        return
+      end
+
+      vim.system({ 'git', '-C', cwd, 'status', '--porcelain=1', '--branch' }, { text = true }, function(result)
+        local branch = nil
+        local changed = nil
+
+        if result.code == 0 and result.stdout then
+          changed = 0
+          for line in result.stdout:gmatch '[^\r\n]+' do
+            if vim.startswith(line, '## ') then
+              branch = line:gsub('^## ', ''):gsub('%.%.+.*$', '')
+            elseif line ~= '' then
+              changed = changed + 1
+            end
+          end
+        end
+
+        vim.schedule(function()
+          if not vim.api.nvim_win_is_valid(winid) then
+            return
+          end
+          if vim.bo[vim.api.nvim_win_get_buf(winid)].filetype ~= 'dashboard' then
+            return
+          end
+          if branch or changed ~= nil then
+            set_dashboard_winbar(winid, branch, changed)
+          else
+            vim.wo[winid].winbar = ''
+          end
+        end)
+      end)
+    end
+
     local function stop_dashboard_wave()
       wave_token = wave_token + 1
       if wave_buf and vim.api.nvim_buf_is_valid(wave_buf) then
@@ -367,28 +469,39 @@ return {
         vim.api.nvim_set_hl(0, 'DashboardKeyHighlight', { fg = '#ffffff' }) -- Key highlight
         vim.api.nvim_set_hl(0, 'DashboardIcon', { fg = '#ff79c6', bg = 'NONE' }) -- Icon highlight
         vim.api.nvim_set_hl(0, 'DashboardShortCut', { fg = '#8be9fd', bg = 'NONE' }) -- Shortcut text
+        vim.api.nvim_set_hl(0, 'DashboardGitBubble', { fg = '#080808', bg = '#79dac8', bold = true })
+        vim.api.nvim_set_hl(0, 'DashboardGitBubbleEdge', { fg = '#79dac8', bg = 'NONE', bold = true })
+        vim.api.nvim_set_hl(0, 'DashboardGitDirtyBubble', { fg = '#080808', bg = '#a6e3a1', bold = true })
+        vim.api.nvim_set_hl(0, 'DashboardGitDirtyEdge', { fg = '#a6e3a1', bg = 'NONE', bold = true })
+        vim.api.nvim_set_hl(0, 'DashboardGitCleanBubble', { fg = '#080808', bg = '#79dac8', bold = true })
+        vim.api.nvim_set_hl(0, 'DashboardGitCleanEdge', { fg = '#79dac8', bg = 'NONE', bold = true })
 
         local buf = vim.api.nvim_get_current_buf()
         if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == 'dashboard' then
           start_dashboard_wave(buf)
+          refresh_dashboard_git(vim.api.nvim_get_current_win())
         end
       end, -- Apply custom highlights after the theme is loaded
     })
 
-    vim.api.nvim_create_autocmd('FileType', {
-      pattern = 'dashboard',
-      callback = function(ev)
-        start_dashboard_wave(ev.buf)
-      end,
-    })
-
-    vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
-      callback = function(ev)
-        if vim.api.nvim_buf_is_valid(ev.buf) and vim.bo[ev.buf].filetype == 'dashboard' then
+      vim.api.nvim_create_autocmd('FileType', {
+        pattern = 'dashboard',
+        callback = function(ev)
           start_dashboard_wave(ev.buf)
-        end
-      end,
-    })
+          ensure_dashboard_winhighlight(vim.api.nvim_get_current_win())
+          refresh_dashboard_git(vim.api.nvim_get_current_win())
+        end,
+      })
+
+      vim.api.nvim_create_autocmd({ 'BufEnter', 'WinEnter' }, {
+        callback = function(ev)
+          if vim.api.nvim_buf_is_valid(ev.buf) and vim.bo[ev.buf].filetype == 'dashboard' then
+            start_dashboard_wave(ev.buf)
+            ensure_dashboard_winhighlight(vim.api.nvim_get_current_win())
+            refresh_dashboard_git(vim.api.nvim_get_current_win())
+          end
+        end,
+      })
 
     vim.api.nvim_create_autocmd({ 'BufLeave', 'BufWipeout', 'VimLeavePre' }, {
       callback = function(ev)
