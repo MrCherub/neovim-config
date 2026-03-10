@@ -11,7 +11,7 @@ https://github.com/user-attachments/assets/7000ecfb-4a21-4513-a635-3280c3abdd0f
 This fork now includes a treesitter migration on top of Kickstart:
 
 - `nvim-treesitter` was moved from the legacy `configs.setup(...)` API to the newer `main` branch API.
-- Treesitter startup is explicit now: parsers are installed on demand, buffers attach via `vim.treesitter.start(...)`, and indentation uses `require('nvim-treesitter').indentexpr()`.
+- Treesitter startup is explicit now: buffers attach via `vim.treesitter.start(...)`, and indentation uses `require('nvim-treesitter').indentexpr()`.
 - `Neovim 0.11+` is now the expected minimum for this config.
 - The new treesitter setup also requires the `tree-sitter` CLI to compile parsers. On Homebrew, install `tree-sitter-cli`.
 - Telescope previewers use regex highlighting instead of treesitter, so parser/query mismatches in preview buffers do not crash pickers on `Neovim 0.11.6`.

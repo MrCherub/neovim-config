@@ -1437,15 +1437,10 @@ require('lazy').setup({
         'vimdoc',
         'yaml',
       }
-      local install_dir = vim.fn.stdpath 'data' .. '/site'
       local treesitter_runtime = vim.fn.stdpath 'data' .. '/lazy/nvim-treesitter/runtime'
       local lua_highlights = table.concat(vim.fn.readfile(vim.fn.stdpath 'config' .. '/queries/lua/highlights.scm'), '\n')
       local tmux_highlights = table.concat(vim.fn.readfile(vim.fn.stdpath 'config' .. '/queries/tmux/highlights.scm'), '\n')
 
-      require('nvim-treesitter').setup {
-        install_dir = install_dir,
-      }
-      vim.opt.runtimepath:prepend(install_dir)
       vim.opt.runtimepath:prepend(treesitter_runtime)
 
       -- Neovim 0.11.6 loads a Lua parser that does not understand the
