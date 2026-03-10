@@ -721,11 +721,15 @@ require('lazy').setup({
         -- You can put your default mappings / updates / etc. in here
         --  All the info you're looking for is in `:help telescope.setup()`
         --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
+        defaults = {
+          preview = {
+            -- Telescope documents that previewers can use tree-sitter or regex
+            -- highlighting. Keep treesitter for real buffers, but use the regex
+            -- fallback here so parser/query mismatches in preview windows do not
+            -- crash pickers.
+            treesitter = false,
+          },
+        },
         -- pickers = {}
         extensions = {
           ['ui-select'] = {
@@ -1407,26 +1411,47 @@ require('lazy').setup({
     build = ':TSUpdate',
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter-intro`
     config = function()
-      local treesitter = require 'nvim-treesitter'
-      local parsers = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
-      local lua_highlights = table.concat(vim.fn.readfile(vim.fn.stdpath 'config' .. '/queries/lua/highlights.scm'), '\n')
-
-      treesitter.setup {
-        install_dir = vim.fn.stdpath 'data' .. '/site',
+      local parsers = {
+        'bash',
+        'bibtex',
+        'c',
+        'cpp',
+        'css',
+        'diff',
+        'html',
+        'java',
+        'javascript',
+        'json',
+        'latex',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'python',
+        'query',
+        'regex',
+        'toml',
+        'tsx',
+        'typescript',
+        'vim',
+        'vimdoc',
+        'yaml',
       }
+      local install_dir = vim.fn.stdpath 'data' .. '/site'
+      local treesitter_runtime = vim.fn.stdpath 'data' .. '/lazy/nvim-treesitter/runtime'
+      local lua_highlights = table.concat(vim.fn.readfile(vim.fn.stdpath 'config' .. '/queries/lua/highlights.scm'), '\n')
+      local tmux_highlights = table.concat(vim.fn.readfile(vim.fn.stdpath 'config' .. '/queries/tmux/highlights.scm'), '\n')
+
+      require('nvim-treesitter').setup {
+        install_dir = install_dir,
+      }
+      vim.opt.runtimepath:prepend(install_dir)
+      vim.opt.runtimepath:prepend(treesitter_runtime)
 
       -- Neovim 0.11.6 loads a Lua parser that does not understand the
       -- `operator` field used by newer nvim-treesitter Lua queries.
       vim.treesitter.query.set('lua', 'highlights', lua_highlights)
-
-      local installed = treesitter.get_installed()
-      local missing = vim.tbl_filter(function(lang)
-        return not vim.tbl_contains(installed, lang)
-      end, parsers)
-
-      if #missing > 0 then
-        treesitter.install(missing)
-      end
+      vim.treesitter.query.set('tmux', 'highlights', tmux_highlights)
 
       vim.api.nvim_create_autocmd('FileType', {
         group = vim.api.nvim_create_augroup('kickstart-treesitter', { clear = true }),
@@ -1443,7 +1468,7 @@ require('lazy').setup({
           end
 
           vim.treesitter.start(buf, language)
-          vim.bo[buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
         end,
       })
     end,
