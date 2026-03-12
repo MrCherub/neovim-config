@@ -10,6 +10,42 @@ return {
     local sparkle_tick = 0
     local sparkle_candidates = {}
     local active_sparkles = {}
+    local dashboard_verse_idx = nil
+
+    local bible_verses = {
+      {
+        reference = 'Psalm 27:1',
+        text = 'The Lord is my light and my salvation; whom shall I fear? The Lord is the strength of my life; of whom shall I be afraid?',
+      },
+      {
+        reference = 'Proverbs 3:5',
+        text = 'Trust in the Lord with all your heart, and lean not on your own understanding.',
+      },
+      {
+        reference = 'Isaiah 40:31',
+        text = 'Those who wait on the Lord shall renew their strength; they shall mount up with wings like eagles.',
+      },
+      {
+        reference = 'Matthew 5:14',
+        text = 'You are the light of the world. A city that is set on a hill cannot be hidden.',
+      },
+      {
+        reference = 'John 14:6',
+        text = 'I am the way, the truth, and the life. No one comes to the Father except through Me.',
+      },
+      {
+        reference = 'Romans 8:28',
+        text = 'All things work together for good to those who love God, to those who are the called according to His purpose.',
+      },
+      {
+        reference = '2 Timothy 1:7',
+        text = 'God has not given us a spirit of fear, but of power and of love and of a sound mind.',
+      },
+      {
+        reference = 'Philippians 4:13',
+        text = 'I can do all things through Christ who strengthens me.',
+      },
+    }
 
     local wave_colors = {
       '#0891b2',
@@ -27,6 +63,38 @@ return {
 
     local function statusline_escape(text)
       return (text or ''):gsub('%%', '%%%%')
+    end
+
+    local function truncated_verse_text(text, max_words, max_chars)
+      local words = vim.split(text or '', '%s+', { trimempty = true })
+      local picked = {}
+      for idx, word in ipairs(words) do
+        if idx > max_words then
+          break
+        end
+        picked[#picked + 1] = word
+      end
+
+      local snippet = table.concat(picked, ' ')
+      if #snippet > max_chars then
+        snippet = snippet:sub(1, max_chars):gsub('%s+%S*$', '')
+      end
+
+      if snippet ~= (text or '') then
+        snippet = snippet:gsub('[%s%.%,%;%:]+$', '') .. '...'
+      end
+      return snippet
+    end
+
+    local function default_verse_index()
+      local year = tonumber(os.date '%Y') or 0
+      local day = tonumber(os.date '%j') or 0
+      return ((year * 367 + day) % #bible_verses) + 1
+    end
+
+    local function current_dashboard_verse()
+      dashboard_verse_idx = dashboard_verse_idx or default_verse_index()
+      return bible_verses[dashboard_verse_idx]
     end
 
     local function ensure_dashboard_winhighlight(winid)
@@ -53,11 +121,23 @@ return {
       vim.wo[winid].winhighlight = table.concat(parts, ',')
     end
 
-    local function dashboard_git_winbar(branch, changed)
+    local function dashboard_winbar(winid, branch, changed)
       local parts = { '%=' }
+      local width = (winid and vim.api.nvim_win_is_valid(winid)) and vim.api.nvim_win_get_width(winid) or vim.o.columns
+      local verse = current_dashboard_verse()
+
+      if verse then
+        parts[#parts + 1] = ('%%#DashboardVerseRefEdge#%%#DashboardVerseRefBubble# %s %%#DashboardVerseRefEdge#%%*'):format(statusline_escape(verse.reference))
+        if width >= 130 then
+          local max_words = width >= 180 and 11 or 7
+          local max_chars = width >= 180 and 72 or 42
+          local snippet = truncated_verse_text(verse.text, max_words, max_chars)
+          parts[#parts + 1] = (' %%#DashboardVerseTextEdge#%%#DashboardVerseTextBubble# %s %%#DashboardVerseTextEdge#%%*'):format(statusline_escape(snippet))
+        end
+      end
 
       if branch and branch ~= '' then
-        parts[#parts + 1] = ('%%#DashboardGitBubbleEdge#%%#DashboardGitBubble#  %s %%#DashboardGitBubbleEdge#%%*'):format(statusline_escape(branch))
+        parts[#parts + 1] = (' %%#DashboardGitBubbleEdge#%%#DashboardGitBubble#  %s %%#DashboardGitBubbleEdge#%%*'):format(statusline_escape(branch))
       end
 
       if changed ~= nil then
@@ -76,7 +156,7 @@ return {
       end
 
       ensure_dashboard_winhighlight(winid)
-      vim.wo[winid].winbar = dashboard_git_winbar(branch, changed)
+      vim.wo[winid].winbar = dashboard_winbar(winid, branch, changed)
     end
 
     local function refresh_dashboard_git(winid)
@@ -121,7 +201,8 @@ return {
           if branch or changed ~= nil then
             set_dashboard_winbar(winid, branch, changed)
           else
-            vim.wo[winid].winbar = ''
+            ensure_dashboard_winhighlight(winid)
+            vim.wo[winid].winbar = dashboard_winbar(winid)
           end
         end)
       end)
@@ -475,6 +556,10 @@ return {
         vim.api.nvim_set_hl(0, 'DashboardGitDirtyEdge', { fg = '#a6e3a1', bg = 'NONE', bold = true })
         vim.api.nvim_set_hl(0, 'DashboardGitCleanBubble', { fg = '#080808', bg = '#79dac8', bold = true })
         vim.api.nvim_set_hl(0, 'DashboardGitCleanEdge', { fg = '#79dac8', bg = 'NONE', bold = true })
+        vim.api.nvim_set_hl(0, 'DashboardVerseRefBubble', { fg = '#080808', bg = '#f1f5a9', bold = true })
+        vim.api.nvim_set_hl(0, 'DashboardVerseRefEdge', { fg = '#f1f5a9', bg = 'NONE', bold = true })
+        vim.api.nvim_set_hl(0, 'DashboardVerseTextBubble', { fg = '#080808', bg = '#d8f6c4', bold = true })
+        vim.api.nvim_set_hl(0, 'DashboardVerseTextEdge', { fg = '#d8f6c4', bg = 'NONE', bold = true })
 
         local buf = vim.api.nvim_get_current_buf()
         if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].filetype == 'dashboard' then
@@ -515,6 +600,14 @@ return {
       local buf = vim.api.nvim_get_current_buf()
       if vim.bo[buf].filetype == 'dashboard' then
         start_dashboard_wave(buf)
+      end
+    end, {})
+
+    vim.api.nvim_create_user_command('DashboardVerseNext', function()
+      dashboard_verse_idx = ((dashboard_verse_idx or default_verse_index()) % #bible_verses) + 1
+      local winid = vim.api.nvim_get_current_win()
+      if vim.bo[vim.api.nvim_win_get_buf(winid)].filetype == 'dashboard' then
+        refresh_dashboard_git(winid)
       end
     end, {})
   end,
