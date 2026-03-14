@@ -1439,6 +1439,7 @@ require('lazy').setup({
       }
       local treesitter_runtime = vim.fn.stdpath 'data' .. '/lazy/nvim-treesitter/runtime'
       local lua_highlights = table.concat(vim.fn.readfile(vim.fn.stdpath 'config' .. '/queries/lua/highlights.scm'), '\n')
+      local latex_highlights = table.concat(vim.fn.readfile(vim.fn.stdpath 'config' .. '/queries/latex/highlights.scm'), '\n')
       local tmux_highlights = table.concat(vim.fn.readfile(vim.fn.stdpath 'config' .. '/queries/tmux/highlights.scm'), '\n')
 
       vim.opt.runtimepath:prepend(treesitter_runtime)
@@ -1446,6 +1447,7 @@ require('lazy').setup({
       -- Neovim 0.11.6 loads a Lua parser that does not understand the
       -- `operator` field used by newer nvim-treesitter Lua queries.
       vim.treesitter.query.set('lua', 'highlights', lua_highlights)
+      vim.treesitter.query.set('latex', 'highlights', latex_highlights)
       vim.treesitter.query.set('tmux', 'highlights', tmux_highlights)
 
       vim.api.nvim_create_autocmd('FileType', {
