@@ -52,28 +52,28 @@ return {
       git_status.setup()
 
       local wave_colors = {
-        '#6d8fe8',
-        '#7aa2f7',
-        '#9bb5ff',
-        '#c4d2ff',
-        '#ffffff',
-        '#efe7ff',
-        '#d9c2ff',
-        '#c4b5fd',
-        '#b7a3ff',
+        '#5e81ac',
+        '#81a1c1',
+        '#88c0d0',
+        '#8fbcbb',
+        '#a3be8c',
+        '#8fbcbb',
+        '#88c0d0',
+        '#81a1c1',
+        '#5e81ac',
       }
       local wave_hl_prefix = 'LualineWaveName'
       local wave_idle_hl = 'LualineWaveIdle'
       local wave_phase = 0
       local wave_visible = true
       local wave_tick = 0
-      local wave_interval_ms = 340
+      local wave_interval_ms = 1020
       local wave_toggle_ticks = 4
 
       for idx, color in ipairs(wave_colors) do
         vim.api.nvim_set_hl(0, wave_hl_prefix .. idx, { fg = color, bg = colors.grey, bold = true })
       end
-      vim.api.nvim_set_hl(0, wave_idle_hl, { fg = colors.violet, bg = colors.grey, bold = true })
+      vim.api.nvim_set_hl(0, wave_idle_hl, { fg = '#88c0d0', bg = colors.grey, bold = true })
 
       local function wave_name_text(name, animate)
         local out = {}
@@ -214,7 +214,7 @@ return {
                 directory = '',
               },
               buffers_color = {
-                active = { fg = colors.violet, bg = colors.grey, gui = 'bold' },
+                active = { fg = '#88c0d0', bg = colors.grey, gui = 'bold' },
                 inactive = { fg = colors.white, bg = colors.grey },
               },
             },

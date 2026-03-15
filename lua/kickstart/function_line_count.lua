@@ -5,7 +5,7 @@ local timers = {}
 local enabled = true
 
 local config = {
-  debounce_ms = 300,
+  debounce_ms = 1200,
   excluded_buftypes = {
     help = true,
     nofile = true,
