@@ -37,9 +37,6 @@ return {
       local file_time = require 'kickstart.file_time'
       local git_status = require 'kickstart.git_status'
 
-      file_time.setup()
-      git_status.setup()
-
       local function noice_recording_component()
         local ok, noice = pcall(require, 'noice')
         if not ok or not noice.api or not noice.api.status or not noice.api.status.mode then
@@ -50,6 +47,9 @@ return {
         end
         return noice.api.status.mode.get()
       end
+
+      file_time.setup()
+      git_status.setup()
 
       local wave_colors = {
         '#6d8fe8',
@@ -171,7 +171,17 @@ return {
           icons_enabled = true,
           component_separators = { left = '|', right = '|' },
           section_separators = { left = '', right = '' },
-          disabled_filetypes = {},
+          disabled_filetypes = {
+            winbar = {
+              'dashboard',
+              'TelescopePrompt',
+              'neo-tree',
+              'lazy',
+              'mason',
+              'help',
+              'qf',
+            },
+          },
           statusline = {},
           winbar = {},
         },
@@ -211,6 +221,32 @@ return {
           },
           lualine_x = {
             {
+              noice_recording_component,
+              color = { fg = colors.red, bg = colors.grey, gui = 'bold' },
+            },
+            'encoding',
+            'fileformat',
+            'filetype',
+          },
+          lualine_y = { 'progress' },
+          lualine_z = { { 'location', separator = { right = '' }, left_padding = 2 } },
+        },
+        inactive_sections = {
+          lualine_a = { 'filename' },
+          lualine_b = {},
+          lualine_c = {},
+          lualine_x = {},
+          lualine_y = {},
+          lualine_z = { 'location' },
+        },
+        winbar = {
+          lualine_a = {},
+          lualine_b = {},
+          lualine_c = {},
+          lualine_x = {},
+          lualine_y = {},
+          lualine_z = {
+            {
               git_branch_component,
               separator = { left = '', right = '' },
               color = 'LualineGitBranch',
@@ -235,26 +271,8 @@ return {
               color = 'LualineFileTime',
               padding = { left = 0, right = 0 },
             },
-            {
-              noice_recording_component,
-              color = { fg = colors.red, bg = colors.grey, gui = 'bold' },
-            },
-            'encoding',
-            'fileformat',
-            'filetype',
           },
-          lualine_y = { 'progress' },
-          lualine_z = { { 'location', separator = { right = '' }, left_padding = 2 } },
         },
-        inactive_sections = {
-          lualine_a = { 'filename' },
-          lualine_b = {},
-          lualine_c = {},
-          lualine_x = {},
-          lualine_y = {},
-          lualine_z = { 'location' },
-        },
-        winbar = {},
         inactive_winbar = {},
         -- tabline = {
         --   lualine_a = {}, -- Buffer list should remain in tabline
