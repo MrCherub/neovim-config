@@ -1545,6 +1545,9 @@ require('lazy').setup({
     },
   },
 })
+
+require('kickstart.function_line_count').setup()
+
 -- Your new CodeCompanion mappings:
 vim.keymap.set('n', '<leader>aa', function()
   -- Try to find a window with "CodeCompanion" in the buffer name
